@@ -9,6 +9,7 @@ const upload = multer({ dest: "./files" });
 mongoose.connect(process.env.DATABASE_URL);
 const app = express();
 app.set("view engine", "ejs");
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
   res.render("index");
@@ -32,9 +33,20 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
 app.get("/file/:id", async (req, res) => {
   // res.send(`here is the file you sent : ${req.params.id}`);
+  if (req.body.password !== null) {
+    res.render("password");
+    return;
+  }
+
   const file = await File.findById(req.params.id);
   file.downloadCount++;
   await file.save();
+
+  if (!(await bcrypt.compare(req.body.password, file.password))) {
+    res.render("password", {error: true});
+    return
+  }
+
   console.log(file);
   res.download(file.path, file.originalName);
 });
